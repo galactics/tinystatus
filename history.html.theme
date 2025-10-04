@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="assets/plotly-3.1.0.min.js" charset="utf-8"></script>
     <title>TinyStatus History</title>
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
@@ -90,6 +91,7 @@
         text-decoration: none;
     }
     .footer a:hover { text-decoration: underline; }
+    .plot { max-height: 250px; }
     </style>
 </head>
 <body>
@@ -97,15 +99,29 @@
     <div class="history-grid">
         {% for service, entries in history.items() %}
         <div class="history-item">
-            <h2>{{ service }}</h2>
-            {% for entry in entries|reverse %}
-            <div class="history-entry">
-                <span>{{ entry.timestamp.split('T')[0] }} {{ entry.timestamp.split('T')[1][:8] }}</span>
-                <span class="{% if entry.status %}status-up{% else %}status-down{% endif %}">
-                    {{ 'Up' if entry.status else 'Down' }}
-                </span>
-            </div>
-            {% endfor %}
+            <h2 class="{% if (entries|last)['status'] %}status-up{% else %}status-down{% endif %}">{{ service }}</h2>
+            <div class="plot" id="plot-{{ service.split()[0] }}"></div>
+            <script>
+                TESTER = document.getElementById('plot-{{ service.split()[0] }}');
+                Plotly.newPlot( TESTER, [
+                    {
+                        x: ["{{ entries|reverse|map(attribute="timestamp")|join('\", \"') }}"],
+                        y: [{{ entries|reverse|map(attribute="status")|join(", ")|replace("True", "1")|replace("False", "null") }}],
+                        type: "scatter",
+                        mode: "lines+markers",
+                        marker: {color: "green"}
+                    },
+                    {
+                        x: ["{{ entries|reverse|map(attribute="timestamp")|join('\", \"') }}"],
+                        y: [{{ entries|reverse|map(attribute="status")|join(", ")|replace("True", "null")|replace("False", "0") }}],
+                        type: "scatter",
+                        mode: "lines+markers",
+                        marker: {color: "red"}
+                    }],
+                    {showlegend: false, margin: { t: 0, r:0, b:0, l:0.5 }, yaxis: {range: [-0.2, 1.2]}},
+                    {displayModeBar: false, displaylogo: false}
+                );
+            </script>
         </div>
         {% endfor %}
     </div>
